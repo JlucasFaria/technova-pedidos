@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TechNova | Gestao de Pedidos</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">
+      <span class="logo">TN</span>
+      <div>
+        <h1>TechNova Pedidos</h1>
+        <p class="subtitulo">Painel de acompanhamento de pedidos</p>
+      </div>
+    </div>
+    <div class="saude" id="saude">verificando ambiente...</div>
+  </header>
+
+  <main>
+    <section class="cartao">
+      <h2>Novo pedido</h2>
+      <form id="form-pedido" class="formulario">
+        <label>Cliente
+          <input type="text" name="cliente" placeholder="Ex.: Mercado Sao Jorge" required />
+        </label>
+        <label>Produto
+          <input type="text" name="produto" placeholder="Ex.: Licenca ERP" required />
+        </label>
+        <label>Quantidade
+          <input type="number" name="quantidade" min="1" value="1" required />
+        </label>
+        <label>Valor unitario (R$)
+          <input type="number" name="valorUnitario" min="0.01" step="0.01" value="100.00" required />
+        </label>
+        <button type="submit">Cadastrar pedido</button>
+      </form>
+      <p class="aviso" id="aviso"></p>
+    </section>
+
+    <section class="cartao">
+      <div class="cabecalho-lista">
+        <h2>Pedidos cadastrados</h2>
+        <span class="contador" id="contador">0 pedidos</span>
+      </div>
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Produto</th>
+            <th>Qtd.</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <p>TechNova Solucoes em Software &middot; Projeto de adocao da Cultura DevOps</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
