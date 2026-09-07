@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const express = require('express');
 const pedidosRouter = require('./routes/pedidos');
 const { healthCheck } = require('./db');
@@ -7,12 +8,14 @@ const { healthCheck } = require('./db');
 const app = express();
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/api/health', async (_req, res) => {
   res.json({
     status: 'ok',
     servico: 'technova-pedidos',
-    versao: process.env.APP_VERSION || '1.0.0'
+    versao: process.env.APP_VERSION || '1.0.0',
+    horario: new Date().toISOString()
   });
 });
 
