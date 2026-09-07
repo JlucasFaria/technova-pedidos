@@ -17,7 +17,7 @@ function validarPedido(corpo = {}) {
     erros.push('O campo "produto" e obrigatorio e deve ter ao menos 2 caracteres.');
   }
 
-  if (!Number.isInteger(Number(corpo.quantidade)) || Number(corpo.quantidade) < 0) {
+  if (!Number.isInteger(Number(corpo.quantidade)) || Number(corpo.quantidade) <= 0) {
     erros.push('O campo "quantidade" deve ser um numero inteiro maior que zero.');
   }
 
