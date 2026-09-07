@@ -59,3 +59,59 @@ jobs:
 
       - name: Executar a suite de testes
         run: npm test
+
+  # ---------------------------------------------------------------------
+  # Etapa 3 - Build da imagem Docker e teste de subida do container
+  # ---------------------------------------------------------------------
+  docker:
+    name: Build e validacao da imagem Docker
+    runs-on: ubuntu-latest
+    needs: testes
+    steps:
+      - name: Baixar o codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir a imagem da aplicacao
+        run: docker build -t technova-pedidos:${{ github.sha }} .
+
+      - name: Subir o container a partir da imagem
+        run: |
+          docker run -d --name technova-ci -p 3000:3000 technova-pedidos:${{ github.sha }}
+          sleep 8
+
+      - name: Validar o endpoint de saude da aplicacao
+        run: |
+          resposta=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health)
+          echo "Codigo HTTP retornado: $resposta"
+          test "$resposta" = "200"
+
+      - name: Exibir os logs do container
+        if: always()
+        run: docker logs technova-ci
+
+      - name: Encerrar e remover o container
+        if: always()
+        run: docker rm -f technova-ci
+
+  # ---------------------------------------------------------------------
+  # Etapa 4 - Resumo do resultado do pipeline
+  # ---------------------------------------------------------------------
+  resultado:
+    name: Resumo do pipeline
+    runs-on: ubuntu-latest
+    needs: [verificacao, testes, docker]
+    if: always()
+    steps:
+      - name: Publicar o resumo da execucao
+        run: |
+          {
+            echo "## Resultado do pipeline - TechNova Pedidos"
+            echo ""
+            echo "| Etapa | Resultado |"
+            echo "|---|---|"
+            echo "| Verificacao de codigo | ${{ needs.verificacao.result }} |"
+            echo "| Testes automatizados | ${{ needs.testes.result }} |"
+            echo "| Build da imagem Docker | ${{ needs.docker.result }} |"
+            echo ""
+            echo "Commit: \`${{ github.sha }}\` - Branch: \`${{ github.ref_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
