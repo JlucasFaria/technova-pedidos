@@ -11,12 +11,18 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/api/health', async (_req, res) => {
-  res.json({
-    status: 'ok',
-    servico: 'technova-pedidos',
-    versao: process.env.APP_VERSION || '1.0.0',
-    horario: new Date().toISOString()
-  });
+  try {
+    const banco = await healthCheck();
+    res.json({
+      status: 'ok',
+      servico: 'technova-pedidos',
+      versao: process.env.APP_VERSION || '1.0.0',
+      banco,
+      horario: new Date().toISOString()
+    });
+  } catch (erro) {
+    res.status(503).json({ status: 'indisponivel', detalhe: erro.message });
+  }
 });
 
 app.use('/api/pedidos', pedidosRouter);
