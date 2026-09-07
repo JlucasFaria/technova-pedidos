@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const pedidosRouter = require('./routes/pedidos');
 const { healthCheck } = require('./db');
 
 const app = express();
@@ -14,6 +15,8 @@ app.get('/api/health', async (_req, res) => {
     versao: process.env.APP_VERSION || '1.0.0'
   });
 });
+
+app.use('/api/pedidos', pedidosRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ erro: 'Rota nao encontrada.' });
