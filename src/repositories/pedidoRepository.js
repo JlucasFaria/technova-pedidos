@@ -6,6 +6,8 @@ const memoria = {
   sequencia: 0
 };
 
+const STATUS_VALIDOS = ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'];
+
 function normalizar(linha) {
   return {
     id: Number(linha.id),
@@ -44,10 +46,36 @@ async function criar(dados) {
   return normalizar(novo);
 }
 
+async function atualizarStatus(id, status) {
+  const pedido = memoria.registros.find((item) => item.id === Number(id));
+  if (!pedido) {
+    return null;
+  }
+  pedido.status = status;
+  return normalizar(pedido);
+}
+
+async function remover(id) {
+  const indice = memoria.registros.findIndex((item) => item.id === Number(id));
+  if (indice === -1) {
+    return false;
+  }
+  memoria.registros.splice(indice, 1);
+  return true;
+}
+
 /** Utilizado pelos testes automatizados para garantir isolamento entre casos. */
 function limparMemoria() {
   memoria.registros = [];
   memoria.sequencia = 0;
 }
 
-module.exports = { listar, buscarPorId, criar, limparMemoria };
+module.exports = {
+  STATUS_VALIDOS,
+  listar,
+  buscarPorId,
+  criar,
+  atualizarStatus,
+  remover,
+  limparMemoria
+};

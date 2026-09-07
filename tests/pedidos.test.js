@@ -59,6 +59,55 @@ test('POST /api/pedidos cria um pedido valido', async () => {
   assert.ok(pedido.id > 0);
 });
 
+test('POST /api/pedidos rejeita quantidade invalida', async () => {
+  const resposta = await criarPedido({ quantidade: 0 });
+  const corpo = await resposta.json();
+
+  assert.equal(resposta.status, 400);
+  assert.ok(corpo.erros.some((erro) => erro.includes('quantidade')));
+});
+
+test('POST /api/pedidos rejeita cliente ausente', async () => {
+  const resposta = await criarPedido({ cliente: '' });
+
+  assert.equal(resposta.status, 400);
+});
+
+test('PATCH /api/pedidos/:id/status altera o status do pedido', async () => {
+  const { id } = await (await criarPedido()).json();
+
+  const resposta = await fetch(`${base}/api/pedidos/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'pago' })
+  });
+
+  assert.equal(resposta.status, 200);
+  assert.equal((await resposta.json()).status, 'pago');
+});
+
+test('PATCH /api/pedidos/:id/status recusa status desconhecido', async () => {
+  const { id } = await (await criarPedido()).json();
+
+  const resposta = await fetch(`${base}/api/pedidos/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'arquivado' })
+  });
+
+  assert.equal(resposta.status, 400);
+});
+
+test('DELETE /api/pedidos/:id remove o pedido', async () => {
+  const { id } = await (await criarPedido()).json();
+
+  const remocao = await fetch(`${base}/api/pedidos/${id}`, { method: 'DELETE' });
+  assert.equal(remocao.status, 204);
+
+  const busca = await fetch(`${base}/api/pedidos/${id}`);
+  assert.equal(busca.status, 404);
+});
+
 test('GET /api/pedidos/:id inexistente retorna 404', async () => {
   const resposta = await fetch(`${base}/api/pedidos/999`);
 
