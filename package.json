@@ -1,0 +1,29 @@
+{
+  "name": "technova-pedidos",
+  "version": "1.0.0",
+  "description": "API de gestao de pedidos da TechNova Solucoes em Software - projeto de adocao da Cultura DevOps",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "lint": "node --check src/server.js && node --check src/app.js"
+  },
+  "keywords": [
+    "devops",
+    "docker",
+    "ci",
+    "express",
+    "api"
+  ],
+  "author": "Joao Lucas Faria",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}
