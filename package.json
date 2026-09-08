@@ -11,6 +11,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test",
+    "test:postgres": "node --test tests/postgres.test.js",
     "lint": "node scripts/verificar-sintaxe.js"
   },
   "keywords": [
