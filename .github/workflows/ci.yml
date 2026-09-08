@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Baixar o codigo do repositorio
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Configurar o Node.js
         uses: actions/setup-node@v5
@@ -46,7 +46,7 @@ jobs:
         node: ['20', '22']
     steps:
       - name: Baixar o codigo do repositorio
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Configurar o Node.js
         uses: actions/setup-node@v5
@@ -87,7 +87,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Baixar o codigo do repositorio
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Configurar o Node.js
         uses: actions/setup-node@v5
@@ -112,7 +112,7 @@ jobs:
     needs: [testes, testes_postgres]
     steps:
       - name: Baixar o codigo do repositorio
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Construir a imagem da aplicacao
         run: docker build -t technova-pedidos:${{ github.sha }} .
@@ -165,7 +165,7 @@ jobs:
       packages: write
     steps:
       - name: Baixar o codigo do repositorio
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Autenticar no registro de containers
         uses: docker/login-action@v3
