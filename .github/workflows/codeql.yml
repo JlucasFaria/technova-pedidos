@@ -1,0 +1,36 @@
+name: Analise de seguranca do codigo
+
+# Analise estatica do codigo em busca de falhas de seguranca.
+#
+# Complementa o pipeline de CI: enquanto os testes verificam se a aplicacao
+# faz o que deveria, o CodeQL procura padroes conhecidos de vulnerabilidade -
+# como o XSS que foi corrigido no painel web.
+
+on:
+  push:
+    branches: [main, desenvolvimento]
+  pull_request:
+    branches: [main, desenvolvimento]
+  schedule:
+    # Toda segunda-feira as 6h UTC, para detectar falhas descobertas
+    # depois que o codigo ja estava integrado.
+    - cron: '0 6 * * 1'
+
+jobs:
+  analise:
+    name: Analise CodeQL (JavaScript)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Baixar o codigo do repositorio
+        uses: actions/checkout@v5
+
+      - name: Preparar a analise
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Executar a analise
+        uses: github/codeql-action/analyze@v3
