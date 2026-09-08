@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 
 # Estagio 1 - instalacao das dependencias de producao
-FROM node:20-alpine AS dependencias
+FROM node:26-alpine AS dependencias
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # Estagio 2 - imagem final de execucao
-FROM node:20-alpine AS producao
+FROM node:26-alpine AS producao
 
 ENV NODE_ENV=production \
     PORT=3000
