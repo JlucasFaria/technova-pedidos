@@ -1,6 +1,6 @@
 {
   "name": "technova-pedidos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "API de gestao de pedidos da TechNova Solucoes em Software - projeto de adocao da Cultura DevOps",
   "main": "src/server.js",
   "type": "commonjs",
