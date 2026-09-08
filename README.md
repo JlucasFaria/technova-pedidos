@@ -35,7 +35,7 @@ A aplicação em si é uma **API REST de gestão de pedidos** com um painel web 
 | Framework web | Express | 4.19 | Rotas e middlewares da API REST |
 | Banco de dados | PostgreSQL | 16 (alpine) | Persistência dos pedidos em container |
 | Driver de banco | node-postgres (`pg`) | 8.12 | Conexão da API com o PostgreSQL |
-| Testes | `node:test` (nativo) | Node 20+ | Testes automatizados de integração da API |
+| Testes | `node:test` (nativo) | Node 20+ | Testes de unidade e de integração da API |
 | Front-end | HTML5, CSS3 e JavaScript | — | Painel web consumindo a API |
 | Containers | Docker e Docker Compose | 29.x | Empacotamento e orquestração do ambiente |
 | Versionamento | Git e GitHub | 2.52 | Controle de versão local e remoto |
@@ -48,7 +48,9 @@ technova-pedidos/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/        # Modelos de abertura de issues
 │   ├── workflows/
-│   │   └── ci.yml             # Pipeline de Integração Contínua
+│   │   ├── ci.yml             # Pipeline de Integração Contínua
+│   │   └── codeql.yml         # Análise estática de segurança do código
+│   ├── dependabot.yml         # Atualização automática de dependências
 │   └── pull_request_template.md
 ├── db/
 │   └── init.sql               # Criação das tabelas e massa inicial de dados
@@ -58,6 +60,8 @@ technova-pedidos/
 │   ├── app.js
 │   ├── index.html
 │   └── style.css
+├── scripts/
+│   └── verificar-sintaxe.js   # Verificação de sintaxe usada na etapa de lint
 ├── src/
 │   ├── db/index.js            # Conexão com o banco (Postgres ou memória)
 │   ├── repositories/          # Acesso aos dados dos pedidos
@@ -66,7 +70,10 @@ technova-pedidos/
 │   ├── app.js                 # Configuração do Express
 │   └── server.js              # Inicialização do servidor
 ├── tests/
-│   └── pedidos.test.js        # Testes automatizados executados na CI
+│   ├── painel.test.js         # Regressão do escape do painel web
+│   ├── pedidos.test.js        # Integração da API (modo memória)
+│   ├── postgres.test.js       # Integração contra o PostgreSQL real
+│   └── validador.test.js      # Unidade das regras de validação
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
@@ -111,6 +118,7 @@ Sem `DATABASE_URL` configurada, a aplicação usa armazenamento em memória e n�
 npm start          # inicia a API em http://localhost:3000
 npm run dev        # inicia com recarregamento automático
 npm test           # executa os testes automatizados
+npm run lint       # verifica a sintaxe de todos os arquivos
 ```
 
 ### Opção B — Execução em containers (recomendada)
@@ -153,13 +161,27 @@ As regras de contribuição, o padrão de mensagens de commit (Conventional Comm
 
 O pipeline definido em [`.github/workflows/ci.yml`](.github/workflows/ci.yml) é disparado a cada `push` e a cada Pull Request para `main` e `desenvolvimento`, e executa:
 
-1. **Verificação de código** — checkout, instalação das dependências e análise de sintaxe;
-2. **Testes automatizados** — execução da suíte de testes nas versões 20 e 22 do Node.js;
-3. **Build da imagem Docker** — construção da imagem e teste de subida do container com verificação do endpoint de saúde.
+1. **Verificação de código** — checkout, instalação das dependências e análise de sintaxe de todos os arquivos JavaScript;
+2. **Testes automatizados** — execução da suíte nas versões 20 e 22 do Node.js;
+3. **Testes com PostgreSQL** — execução dos testes de integração contra um banco real, subido como serviço do pipeline;
+4. **Build da imagem Docker** — construção da imagem e teste de subida do container com verificação do endpoint de saúde;
+5. **Publicação da imagem** — envio da imagem aprovada para o GitHub Container Registry (apenas em `push` na `main`);
+6. **Resumo do pipeline** — tabela com o resultado de cada etapa.
+
+### Imagem publicada
+
+A cada integração na `main`, o pipeline publica a imagem validada no GitHub Container Registry, etiquetada com `latest` e com o SHA do commit:
+
+```bash
+docker pull ghcr.io/jlucasfaria/technova-pedidos:latest
+docker run -d -p 3000:3000 ghcr.io/jlucasfaria/technova-pedidos:latest
+```
+
+Publicar a imagem em vez de reconstruí-la manualmente garante que o artefato executado em qualquer ambiente é exatamente o que passou por todas as validações — é o primeiro passo da Entrega Contínua.
 
 ## Versão
 
-Versão atual: **1.0.0** — veja o histórico completo em [`CHANGELOG.md`](CHANGELOG.md) e nas [Releases](https://github.com/JlucasFaria/technova-pedidos/releases).
+Versão atual: **1.0.1** — veja o histórico completo em [`CHANGELOG.md`](CHANGELOG.md) e nas [Releases](https://github.com/JlucasFaria/technova-pedidos/releases).
 
 ## Licença
 

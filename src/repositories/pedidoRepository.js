@@ -8,8 +8,6 @@ const memoria = {
   sequencia: 0
 };
 
-const STATUS_VALIDOS = ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'];
-
 function normalizar(linha) {
   return {
     id: Number(linha.id),
@@ -48,8 +46,8 @@ async function buscarPorId(id) {
 
 async function criar(dados) {
   const registro = {
-    cliente: dados.cliente,
-    produto: dados.produto,
+    cliente: String(dados.cliente).trim(),
+    produto: String(dados.produto).trim(),
     quantidade: Number(dados.quantidade),
     valorUnitario: Number(dados.valorUnitario),
     status: dados.status || 'pendente',
@@ -111,7 +109,6 @@ function limparMemoria() {
 }
 
 module.exports = {
-  STATUS_VALIDOS,
   listar,
   buscarPorId,
   criar,

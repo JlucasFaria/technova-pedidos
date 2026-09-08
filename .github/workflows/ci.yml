@@ -61,12 +61,55 @@ jobs:
         run: npm test
 
   # ---------------------------------------------------------------------
-  # Etapa 3 - Build da imagem Docker e teste de subida do container
+  # Etapa 3 - Testes de integracao contra um PostgreSQL de verdade
+  #
+  # A suite anterior roda em modo memoria, o que e rapido mas nao cobre o
+  # comportamento do banco: tipos das colunas, limites e erros de consulta.
+  # Este job sobe um servico PostgreSQL igual ao do docker-compose.
+  # ---------------------------------------------------------------------
+  testes_postgres:
+    name: Testes de integracao com PostgreSQL
+    runs-on: ubuntu-latest
+    needs: verificacao
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: technova
+          POSTGRES_PASSWORD: technova
+          POSTGRES_DB: pedidos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U technova -d pedidos"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Baixar o codigo do repositorio
+        uses: actions/checkout@v5
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar as dependencias
+        run: npm ci
+
+      - name: Executar os testes contra o PostgreSQL
+        run: npm run test:postgres
+        env:
+          DATABASE_URL: postgres://technova:technova@localhost:5432/pedidos
+
+  # ---------------------------------------------------------------------
+  # Etapa 4 - Build da imagem Docker e teste de subida do container
   # ---------------------------------------------------------------------
   docker:
     name: Build e validacao da imagem Docker
     runs-on: ubuntu-latest
-    needs: testes
+    needs: [testes, testes_postgres]
     steps:
       - name: Baixar o codigo do repositorio
         uses: actions/checkout@v5
@@ -75,15 +118,24 @@ jobs:
         run: docker build -t technova-pedidos:${{ github.sha }} .
 
       - name: Subir o container a partir da imagem
-        run: |
-          docker run -d --name technova-ci -p 3000:3000 technova-pedidos:${{ github.sha }}
-          sleep 8
+        run: docker run -d --name technova-ci -p 3000:3000 technova-pedidos:${{ github.sha }}
 
+      # Uma espera fixa falha quando o container demora um segundo a mais e
+      # desperdica tempo quando ele sobe antes. A tentativa repetida encerra
+      # assim que a aplicacao responde.
       - name: Validar o endpoint de saude da aplicacao
         run: |
-          resposta=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health)
-          echo "Codigo HTTP retornado: $resposta"
-          test "$resposta" = "200"
+          for tentativa in $(seq 1 30); do
+            resposta=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || true)
+            if [ "$resposta" = "200" ]; then
+              echo "Aplicacao respondeu 200 na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Tentativa $tentativa: codigo $resposta - aguardando..."
+            sleep 1
+          done
+          echo "A aplicacao nao respondeu 200 apos 30 tentativas."
+          exit 1
 
       - name: Exibir os logs do container
         if: always()
@@ -94,12 +146,69 @@ jobs:
         run: docker rm -f technova-ci
 
   # ---------------------------------------------------------------------
-  # Etapa 4 - Resumo do resultado do pipeline
+  # Etapa 5 - Publicacao da imagem no registro de containers
+  #
+  # Primeiro passo da Entrega Continua: toda imagem que passou por todas as
+  # validacoes e publicada no GitHub Container Registry, versionada pelo
+  # commit. Assim a imagem que sobe em qualquer ambiente e exatamente a que
+  # o pipeline aprovou, sem ninguem reconstruir nada manualmente.
+  #
+  # Roda apenas em push na main, para nao publicar imagem de Pull Request.
+  # ---------------------------------------------------------------------
+  publicar:
+    name: Publicar a imagem no GitHub Container Registry
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Baixar o codigo do repositorio
+        uses: actions/checkout@v5
+
+      - name: Autenticar no registro de containers
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Definir as etiquetas da imagem
+        id: etiquetas
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+            type=ref,event=tag
+
+      - name: Construir e publicar a imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.etiquetas.outputs.tags }}
+          labels: ${{ steps.etiquetas.outputs.labels }}
+
+      - name: Registrar a imagem publicada no resumo
+        run: |
+          {
+            echo "## Imagem publicada"
+            echo ""
+            echo '```'
+            echo "${{ steps.etiquetas.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------
+  # Etapa 6 - Resumo do resultado do pipeline
   # ---------------------------------------------------------------------
   resultado:
     name: Resumo do pipeline
     runs-on: ubuntu-latest
-    needs: [verificacao, testes, docker]
+    needs: [verificacao, testes, testes_postgres, docker, publicar]
     if: always()
     steps:
       - name: Publicar o resumo da execucao
@@ -111,7 +220,9 @@ jobs:
             echo "|---|---|"
             echo "| Verificacao de codigo | ${{ needs.verificacao.result }} |"
             echo "| Testes automatizados | ${{ needs.testes.result }} |"
+            echo "| Testes com PostgreSQL | ${{ needs.testes_postgres.result }} |"
             echo "| Build da imagem Docker | ${{ needs.docker.result }} |"
+            echo "| Publicacao da imagem | ${{ needs.publicar.result }} |"
             echo ""
             echo "Commit: \`${{ github.sha }}\` - Branch: \`${{ github.ref_name }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
