@@ -146,12 +146,69 @@ jobs:
         run: docker rm -f technova-ci
 
   # ---------------------------------------------------------------------
-  # Etapa 5 - Resumo do resultado do pipeline
+  # Etapa 5 - Publicacao da imagem no registro de containers
+  #
+  # Primeiro passo da Entrega Continua: toda imagem que passou por todas as
+  # validacoes e publicada no GitHub Container Registry, versionada pelo
+  # commit. Assim a imagem que sobe em qualquer ambiente e exatamente a que
+  # o pipeline aprovou, sem ninguem reconstruir nada manualmente.
+  #
+  # Roda apenas em push na main, para nao publicar imagem de Pull Request.
+  # ---------------------------------------------------------------------
+  publicar:
+    name: Publicar a imagem no GitHub Container Registry
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Baixar o codigo do repositorio
+        uses: actions/checkout@v5
+
+      - name: Autenticar no registro de containers
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Definir as etiquetas da imagem
+        id: etiquetas
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+            type=ref,event=tag
+
+      - name: Construir e publicar a imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.etiquetas.outputs.tags }}
+          labels: ${{ steps.etiquetas.outputs.labels }}
+
+      - name: Registrar a imagem publicada no resumo
+        run: |
+          {
+            echo "## Imagem publicada"
+            echo ""
+            echo '```'
+            echo "${{ steps.etiquetas.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------
+  # Etapa 6 - Resumo do resultado do pipeline
   # ---------------------------------------------------------------------
   resultado:
     name: Resumo do pipeline
     runs-on: ubuntu-latest
-    needs: [verificacao, testes, testes_postgres, docker]
+    needs: [verificacao, testes, testes_postgres, docker, publicar]
     if: always()
     steps:
       - name: Publicar o resumo da execucao
@@ -165,6 +222,7 @@ jobs:
             echo "| Testes automatizados | ${{ needs.testes.result }} |"
             echo "| Testes com PostgreSQL | ${{ needs.testes_postgres.result }} |"
             echo "| Build da imagem Docker | ${{ needs.docker.result }} |"
+            echo "| Publicacao da imagem | ${{ needs.publicar.result }} |"
             echo ""
             echo "Commit: \`${{ github.sha }}\` - Branch: \`${{ github.ref_name }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
