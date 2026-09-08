@@ -9,10 +9,10 @@ Todas as respostas são no formato `application/json`.
 | Campo | Tipo | Obrigatório | Regra |
 |---|---|---|---|
 | `id` | inteiro | gerado | Identificador do pedido |
-| `cliente` | texto | sim | Mínimo de 3 caracteres |
-| `produto` | texto | sim | Mínimo de 2 caracteres |
-| `quantidade` | inteiro | sim | Maior que zero |
-| `valorUnitario` | decimal | sim | Maior que zero |
+| `cliente` | texto | sim | Texto de 3 a 120 caracteres (espaços das pontas são removidos) |
+| `produto` | texto | sim | Texto de 2 a 120 caracteres (espaços das pontas são removidos) |
+| `quantidade` | inteiro | sim | Inteiro de 1 a 1.000.000 |
+| `valorUnitario` | decimal | sim | Maior que zero e até 99.999.999,99 |
 | `status` | texto | não | `pendente`, `pago`, `enviado`, `entregue` ou `cancelado` (padrão: `pendente`) |
 | `criadoEm` | data/hora | gerado | Data de criação do pedido |
 
@@ -117,7 +117,8 @@ Remove um pedido.
 
 | Código | Significado |
 |---|---|
-| `400` | Dados inválidos na requisição |
-| `404` | Recurso não encontrado |
+| `400` | Dados inválidos na requisição (inclui JSON malformado) |
+| `404` | Recurso não encontrado (inclui `:id` fora do formato numérico) |
+| `413` | Corpo da requisição acima do limite de 10 kB |
 | `500` | Erro interno do servidor |
 | `503` | Aplicação sem conexão com o banco de dados |
